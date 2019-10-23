@@ -1,9 +1,5 @@
 #include <avr/sleep.h>    // Βιβλιοθήκη για τη μείωση της κατανάλωσης ενέργειας
-#include <Ethernet.h>
-#include <Wire.h>
-#include "SI114X.h"     // https://github.com/Seeed-Studio/Grove_Sunlight_Sensor
-#include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
-#include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
+#include <Wire.h>         
 #include "DS3232RTC.h"    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 
@@ -36,8 +32,7 @@ void setup() {
   RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
   RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
 
-  while (!bme680.init())    // Ενεργοποίηση του αισθητήρα BME680
-  {
+  while (!bme680.init()) {   // Ενεργοποίηση του αισθητήρα BME680
     Serial.println("bme680 init failed ! can't find device!");
     delay(10000);
   }  
@@ -55,7 +50,7 @@ void Going_To_Sleep(){
     
     time_t t;
     delay(10);
-    sleep_cpu();    // Ενεργοποίηση της λειτουργίας για τη μείωση της κατανάλωσης ενέργειας
+    sleep_cpu();    // Ενεργοποίηση της λειτουργίας για τη μείωση της κατανάλωσης
 
     bme_readings();   // Μετρήσεις από τον αισθητήρα BME680
     t=RTC.get();
@@ -70,7 +65,8 @@ void wakeUp(){
 }
 
 void bme_readings () {
-    if (bme680.read_sensor_data()) {
+    if (bme680.read_sensor_data()) 
+    {
       Serial.println("Failed to perform reading :(");
       return;
     }
