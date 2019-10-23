@@ -55,6 +55,7 @@ void Going_To_Sleep(){
 
     bme_readings();   // Μετρήσεις από τον αισθητήρα BME680
     t=RTC.get();
+    //Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));
     RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
     RTC.alarm(ALARM_1);
 }
