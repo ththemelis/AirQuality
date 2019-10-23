@@ -14,6 +14,6 @@
 * Σύνδεση του Vcc στα 5V και του GND στη θέση GND του Arduino
 
 ### Βιβλιοθήκη
-[](https://github.com/JChristensen/DS3232RTC)
+[Βιβλιοθήκη](https://github.com/JChristensen/DS3232RTC)
 ## Αισθητήρας θερμοκρασίας
 
