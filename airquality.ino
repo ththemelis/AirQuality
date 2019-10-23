@@ -1,23 +1,21 @@
-#include <avr/sleep.h>    //this AVR library contains the methods that controls the sleep modes
-#include <Wire.h>
-#include "DS3232RTC.h"    // https://github.com/JChristensen/DS3232RTC
-#include "seeed_bme680.h"
+#include <avr/sleep.h>    // Βιβλιοθήκη για τη μείωση της κατανάλωσης ενέργειας
+#include <Wire.h>         
+#include "DS3232RTC.h"    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC
+#include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 
 #define interruptPin 2     // Ορισμός του ακροδέκτη 2 για τον έλεγχο των διακοπών (interrupt)
+#define BME_ADDR  uint8_t(0x76)   // Ορισμός της διεύθυνσης I2C του αισθητήρα BME680
 
-volatile time_t isrUTC;         // ISR's copy of current time in UTC
-
-#define BME_ADDR  uint8_t(0x76)
-
-Seeed_BME680 bme680(BME_ADDR);
-
+volatile time_t isrUTC;         // Η μεταβλητή είναι volatile, γιατί η τιμή της αλλάζει μέσα στη συνάρτηση για την εξυπηρέτηση της διακοπής
 const int time_interval = 1;    // Ορισμός των λεπτών μεταξύ των μετρήσεων (μεταξύ των διακοπών)
+
+Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικειμένου για τον αισθητήρα BME680
 
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
   
-  pinMode(interruptPin,INPUT_PULLUP); //Set pin d2 to input using the buildin pullup resistor
-  // Αρχικοποίηση των alarm 
+  pinMode(interruptPin,INPUT_PULLUP);
+  // Αρχικοποίηση των alarm του RTC
   RTC.setAlarm(ALM1_MATCH_DATE, 0, 0, 0, 1);
   RTC.setAlarm(ALM2_MATCH_DATE, 0, 0, 0, 1);
   RTC.alarm(ALARM_1);
@@ -27,82 +25,72 @@ void setup() {
   RTC.squareWave(SQWAVE_NONE);
 
   time_t t = getUTC();    // Τοποθέτηση της τρέχουσας ώρας στην μεταβλητή t
-  t=RTC.get();    // Παίρνει την τρέχουσα ώρα από το ρολόι (RTC)
+  t=RTC.get();
   setUTC(t);
   RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
-  RTC.alarm(ALARM_1);   // clear the alarm flag
-  RTC.squareWave(SQWAVE_NONE);    // configure the INT/SQW pin for "interrupt" operation (disable square wave output)
-  RTC.alarmInterrupt(ALARM_1, true);      // enable interrupt output for Alarm 1
+  RTC.alarm(ALARM_1);
+  RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
+  RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
 
-  while (!bme680.init()) 
+  while (!bme680.init())    // Ενεργοποίηση του αισθητήρα BME680
   {
     Serial.println("bme680 init failed ! can't find device!");
-  delay(10000);
+    delay(10000);
   }  
 }
 
 void loop() {
-  delay(100);//wait 5 seconds before going to sleep. In real senairio keep this as small as posible
-  Going_To_Sleep();
+    delay(100);
+    Going_To_Sleep();
 }
 
 void Going_To_Sleep(){
-    sleep_enable();//Enabling sleep mode
-    attachInterrupt(0, wakeUp, LOW);//attaching a interrupt to pin d2
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);//Setting the sleep mode, in our case full sleep
-    digitalWrite(LED_BUILTIN,LOW);//turning LED off
-    time_t t;// creates temp time variable
-    t=RTC.get(); //gets current time from rtc
-    Serial.println("Sleep  Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));//prints time stamp on serial monitor
-    delay(100); //wait a second to allow the led to be turned off before going to sleep
-    sleep_cpu();//activating sleep mode
+    sleep_enable();     // Λειτουργία μείωσης κατανάλωσης
+    attachInterrupt(digitalPinToInterrupt(interruptPin), wakeUp, LOW);    // Ορισμός παραμέτρων της διακοπής
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);    // Ορισμός της μορφής της λειτουργίας για τη μείωση της κατανάλωσης ενέργειας - Ελάχιστη κατανάλωση
+    
+    time_t t;
+    delay(10);
+    sleep_cpu();    // Ενεργοποίηση της λειτουργίας για τη μείωση της κατανάλωσης
 
-    bme_readings();//function that reads the temp and the humidity
+    bme_readings();   // Μετρήσεις από τον αισθητήρα BME680
     t=RTC.get();
-    Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));//Prints time stamp 
-    //Set New Alarm
-    RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);
-  
-  // clear the alarm flag
-  RTC.alarm(ALARM_1);
-  }
+    RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
+    RTC.alarm(ALARM_1);
+}
 
-  void wakeUp(){
-  Serial.println("Interrrupt Fired");//Print message to serial monitor
-   sleep_disable();//Disable sleep mode
-  detachInterrupt(0); //Removes the interrupt from pin 2;
+void wakeUp(){
+    sleep_disable();    // Απενεργοποίηση της λειτουργίας μείωσης κατανάλωσης ενέργειας
+    detachInterrupt(digitalPinToInterrupt(interruptPin)); // Απενεργοποίηση των διακοπών από τον ακροδέκτη
 }
 
 void bme_readings () {
-  if (bme680.read_sensor_data()) 
-  {
-    Serial.println("Failed to perform reading :(");
-    return;
-  }
-  Serial.print("temperature ===>> ");
-  Serial.print(bme680.sensor_result_value.temperature);
-  Serial.println(" C");
-
-  Serial.print("pressure ===>> ");
-  Serial.print(bme680.sensor_result_value.pressure/ 1000.0);
-  Serial.println(" KPa");
-
-  Serial.print("humidity ===>> ");
-  Serial.print(bme680.sensor_result_value.humidity);
-  Serial.println(" %"); 
+    if (bme680.read_sensor_data()) 
+    {
+      Serial.println("Failed to perform reading :(");
+      return;
+    }
+    Serial.print("temperature ===>> ");
+    Serial.print(bme680.sensor_result_value.temperature);
+    Serial.println(" C");
+  
+    Serial.print("pressure ===>> ");
+    Serial.print(bme680.sensor_result_value.pressure/ 1000.0);
+    Serial.println(" KPa");
+  
+    Serial.print("humidity ===>> ");
+    Serial.print(bme680.sensor_result_value.humidity);
+    Serial.println(" %"); 
 }
 
-time_t getUTC()
-{
+time_t getUTC() {   // get the current time
     noInterrupts();
     time_t utc = isrUTC;
     interrupts();
     return utc;
 }
 
-// set the current time
-void setUTC(time_t utc)
-{
+void setUTC(time_t utc) { // set the current time
     noInterrupts();
     isrUTC = utc;
     interrupts();
