@@ -1,19 +1,15 @@
 #include <avr/sleep.h>    //this AVR library contains the methods that controls the sleep modes
 #include <Wire.h>
-#include <DS3232RTC.h>    // https://github.com/JChristensen/DS3232RTC
+#include "DS3232RTC.h"    // https://github.com/JChristensen/DS3232RTC
 #include "seeed_bme680.h"
 
 #define interruptPin 2     // Ορισμός του ακροδέκτη 2 για τον έλεγχο των διακοπών (interrupt)
 
 volatile time_t isrUTC;         // ISR's copy of current time in UTC
 
-#define BME_SCK 13
-#define BME_MISO 12
-#define BME_MOSI 11
-#define BME_CS 10
-#define IIC_ADDR  uint8_t(0x76)
+#define BME_ADDR  uint8_t(0x76)
 
-Seeed_BME680 bme680(IIC_ADDR);
+Seeed_BME680 bme680(BME_ADDR);
 
 const int time_interval = 1;    // Ορισμός των λεπτών μεταξύ των μετρήσεων (μεταξύ των διακοπών)
 
