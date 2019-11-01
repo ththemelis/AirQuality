@@ -183,9 +183,8 @@ void loop() {
 }
 
 void Going_To_Sleep(){
-    sleep_enable();     // Λειτουργία μείωσης κατανάλωσης
     attachInterrupt(digitalPinToInterrupt(interruptPin), wakeUp, LOW);    // Ορισμός παραμέτρων της διακοπής
-    // Υπάρχονυ πέντε καταστάσεις μείωσης της κατανάλωσης ενέργειας:
+    // Υπάρχουν πέντε καταστάσεις μείωσης της κατανάλωσης ενέργειας:
     // SLEEP_MODE_IDLE - ελάχιστη μείωση κατανάλωσης ενέργειας
     // SLEEP_MODE_ADC
     // SLEEP_MODE_PWR_SAVE
