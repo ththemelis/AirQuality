@@ -8,6 +8,12 @@
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
 
+// Ορισμός παραμέτρων για την ενσύρματη σύνδεση στο διαδίκτυο
+byte mac[] = {0x2C, 0xF7, 0xF1, 0x08, 0x27, 0xE0}; // Η διεύθυνση MAC του Ethernet Shield
+IPAddress ip(192, 168, 1, 49); // Η στατική διεύθυνση IP του Ethernet Shield, σε περίπτωση που δεν πάρει διεύθυνση ΙΡ μέσω DHCP
+IPAddress myDns(192, 168, 1, 1); // Η διεύθυνση δρομολογητή, σε περίπτωση που δεν πάρει διεύθυνση ΙΡ μέσω DHCP
+EthernetClient ethClient; // Δημιουργία αντικειμένου για την ενσύρματη σύνδεση στο διαδίκτυο
+
 // Ορισμός παραμέτρων λειτουργίας του αισθητήρα αερίων
 //#define GAS_SENSOR uint8_t(0x04) // H διεύθυνση του αισθητήρα στον διαύλο I2C
 //#define PRE_HEAT_TIME   10 // Διάρκεια προθέρμανσης (σε λεπτά). Απαιτούνται τουλάχιστον 10 λεπτά.
@@ -138,6 +144,23 @@ void setup() {
   RTC.alarm(ALARM_1);
   RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
   RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
+
+  Serial.println("Αρχικοποίηση της σύνδεσης στο διαδίκτυο μέσω DHCP");
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("Δεν ήταν δυνατή η αρχικοποίηση της σύνδεσης στο διαδίκτυο μέσω DHCP");
+    if (Ethernet.hardwareStatus() == EthernetNoHardware) { // Έλεγχος ύπαρξης του Ethernet Shield
+      Serial.println("Δεν υπάρχει ή δεν λειτουργεί το Ethernet Shield");
+    } // Πρέπει να μπει μια σημαία που να υποδεικνύει ότι δεν υπάρχει το Ethernet Shield
+    if (Ethernet.linkStatus() == LinkOFF) {
+      Serial.println("Δεν είναι συνδεδεμένο το καλώδιο.");
+    } // Πρέπει να μπει μια σημαία που να υποδεικνύει ότι δεν υπάρχει καλώδιο σύνδεσης στο δίκτυο
+    Ethernet.begin(mac, ip, myDns); // Αρχικοποίηση της σύνδεσης στο διαδίκτυο με στατική ΙΡ
+  } else {
+    Serial.print("Η διεύθυνση ΙΡ (μέσω DHCP) είναι ");
+    Serial.println(Ethernet.localIP());
+  }
+  delay(5000); // Χρόνος για την εκκίνηση του Ethernet Shield
+
 
   while (!bme680.init()) {    // Ενεργοποίηση του αισθητήρα BME680
     Serial.println("bme680 init failed ! can't find device!");
