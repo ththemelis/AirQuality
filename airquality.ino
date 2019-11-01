@@ -145,7 +145,7 @@ void setup() {
   RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
   RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
 
-  Serial.println("Αρχικοποίηση της σύνδεσης στο διαδίκτυο μέσω DHCP");
+//  Serial.println("Αρχικοποίηση της σύνδεσης στο διαδίκτυο μέσω DHCP");
 //  if (Ethernet.begin(mac) == 0) {
 //    Serial.println("Δεν ήταν δυνατή η αρχικοποίηση της σύνδεσης στο διαδίκτυο μέσω DHCP");
 //    if (Ethernet.hardwareStatus() == EthernetNoHardware) { // Έλεγχος ύπαρξης του Ethernet Shield
