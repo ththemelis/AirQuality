@@ -176,8 +176,8 @@ void Going_To_Sleep(){
     Serial.println ("Pm 1.0 "+String(pm25_measurement(5)));
     Serial.println ("Pm 2.5 "+String(pm25_measurement(6)));
     Serial.println ("Pm 10.0 "+String(pm25_measurement(7)));
-    Serial.println ("CO:"+String(gas_co()));
-    Serial.println ("NO2:"+String(gas_no2()));
+//    Serial.println ("CO:"+String(gas_co()));
+//    Serial.println ("NO2:"+String(gas_no2()));
     t=RTC.get();
     Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));
     RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
