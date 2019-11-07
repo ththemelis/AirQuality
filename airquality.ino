@@ -147,13 +147,13 @@ void setup() {
   time_t t = getUTC();    // Τοποθέτηση της τρέχουσας ώρας στην μεταβλητή t
   t=RTC.get();
   setUTC(t);
-  RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
+  RTC.setAlarm(ALM1_MATCH_SECONDS, 0, 0, 0, time_interval);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
   RTC.alarm(ALARM_1);
   RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
   RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
 
   Ethernet.begin(mac, ip, myDns); // Αρχικοποίηση της σύνδεσης στο διαδίκτυο με στατική ΙΡ
-  Serial.print("Η διεύθυνση ΙΡ (μέσω DHCP) είναι ");
+  Serial.print("Η διεύθυνση ΙΡ του Arduino είναι ");
   Serial.println(Ethernet.localIP());    
 
   delay(5000); // Χρόνος για την εκκίνηση του Ethernet Shield
@@ -175,7 +175,7 @@ void setup() {
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
   Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
-  gas.doCalibrate();
+  //gas.doCalibrate();
 
   if (air_sensor.init()) { // Ενεργοποίηση του αισθητήρα σωματιδίων
     Serial.println(F("Απέτυχε η ενεργοποίηση του αισθητήρα σωματιδίων!"));
@@ -184,27 +184,18 @@ void setup() {
 }
 
 void loop() {
-    delay(100);
-    Going_To_Sleep();
+    if ( RTC.alarm(ALARM_1) )    // check alarm flag, clear it if set
+    {
+      mqttClient.poll();
+      Going_To_Sleep();
+    }  
 }
 
 void Going_To_Sleep(){
-    attachInterrupt(digitalPinToInterrupt(interruptPin), wakeUp, LOW);    // Ορισμός παραμέτρων της διακοπής
-    // Υπάρχουν πέντε καταστάσεις μείωσης της κατανάλωσης ενέργειας:
-    // SLEEP_MODE_IDLE - ελάχιστη μείωση κατανάλωσης ενέργειας
-    // SLEEP_MODE_ADC
-    // SLEEP_MODE_PWR_SAVE
-    // SLEEP_MODE_STANDBY
-    // SLEEP_MODE_PWR_DOWN - μέγιστη μείωση κατανάλωσης ενέργειας
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);    // Κατάσταση ελαχιστοποίησης της κατανάλωσης ενέργειας
-
     time_t t;
     t=RTC.get();
     Serial.println("Sleep Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));    
     delay(10);
-
-    sleep_enable();   // Ενεργοποίηση της κατάστασης μειωμένης κατανάλωσης ενέργειας
-    sleep_mode();     // Είσοδος σε κατάσταση μειωμένης κατανάλωσης ενέργειας
 
     Serial.println ("Temperature:"+String(temper()));
     Serial.println ("Humidity:"+String(humidity()));
@@ -213,16 +204,16 @@ void Going_To_Sleep(){
     Serial.println ("Pm 10.0 "+String(pm25_measurement(7)));
     Serial.println ("CO:"+String(gas_co()));
     Serial.println ("NO2:"+String(gas_no2()));
+
+    mqttClient.beginMessage(topic);
+    mqttClient.print("hello ");
+    mqttClient.endMessage();
+    Serial.println();
+    
     t=RTC.get();
     Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));
     RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
     RTC.alarm(ALARM_1);
-}
-
-void wakeUp(){
-    sleep_disable();    // Απενεργοποίηση της λειτουργίας μείωσης κατανάλωσης ενέργειας
-    power_all_enable(); // Ενεργοποίησης των περιφερειακών
-    detachInterrupt(digitalPinToInterrupt(interruptPin)); // Απενεργοποίηση των διακοπών από τον ακροδέκτη
 }
 
 time_t getUTC() {   // get the current time
