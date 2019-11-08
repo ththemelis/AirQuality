@@ -1,13 +1,14 @@
 #include <avr/sleep.h>    // Βιβλιοθήκη για τη μείωση της κατανάλωσης ενέργειας
 #include <avr/power.h>
 #include <Ethernet.h>
-//#include <SPI.h>
+#include <SPI.h>
 #include <Wire.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
 #include "DS3232RTC.h"    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC https://github.com/PaulStoffregen/Time
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
-#include <ArduinoMqttClient.h>
+#include "secrets.h"
+#include <PubSubClient.h>
 
 // Ορισμός παραμέτρων για την ενσύρματη σύνδεση στο διαδίκτυο
 byte mac[] = {0x2C, 0xF7, 0xF1, 0x08, 0x27, 0xE0}; // Η διεύθυνση MAC του Ethernet Shield
@@ -16,10 +17,7 @@ IPAddress myDns(192, 168, 1, 1); // Η διεύθυνση δρομολογητή
 EthernetClient ethClient; // Δημιουργία αντικειμένου για την ενσύρματη σύνδεση στο διαδίκτυο
 
 // Ορισμός παραμέτρων για τον MQTT broker
-const char broker[] = "192.168.1.50";
-int        port     = 1883;
-const char topic[]  = "AirQuality";
-MqttClient mqttClient(ethClient);
+PubSubClient mqttClient(ethClient);
 
 // Ορισμός παραμέτρων λειτουργίας του αισθητήρα αερίων
 #define GAS_SENSOR uint8_t(0x04) // H διεύθυνση του αισθητήρα στον διαύλο I2C
@@ -32,7 +30,7 @@ Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικει�
 // Ορισμός παραμέτρων διακοπών
 #define interruptPin 2     // Ορισμός του ακροδέκτη 2 για τον έλεγχο των διακοπών (interrupt)
 volatile time_t isrUTC;         // Η μεταβλητή είναι volatile, γιατί η τιμή της αλλάζει μέσα στη συνάρτηση για την εξυπηρέτηση της διακοπής
-const int time_interval = 1;    // Ορισμός των λεπτών μεταξύ των μετρήσεων (μεταξύ των διακοπών)
+const int time_interval = 5;    // Ορισμός των λεπτών μεταξύ των μετρήσεων (μεταξύ των διακοπών)
 
 // Ορισμός παραμέτρων για τον αισθητήρα σωματιδίων
 u8 buf[100]; // Αρχικοποίηση της μεταβλητής η οποία θα περιέχει τα δεδομένα του αισθητήρα σωματιδίων
@@ -131,6 +129,33 @@ float pm25_measurement (int sense) {
     return parse_result(buf, 13); // Σωματίδια μεγαλύτερα από 10.0μm
 }
 
+void mqttReconnect() {
+  while (!mqttClient.connected()) {
+    Serial.print("Attempting MQTT connection...");
+
+    // Attempt to connect
+    if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD, MQTT_TOPIC_STATE, 1, true, "disconnected", false)) {
+      Serial.println("connected");
+
+      // Once connected, publish an announcement...
+      mqttClient.publish(MQTT_TOPIC_STATE, "connected", true);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void mqttPublish(char *topic, float payload) {
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(payload);
+
+  mqttClient.publish(topic, String(payload).c_str(), true);
+}
+
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
   
@@ -158,15 +183,7 @@ void setup() {
 
   delay(5000); // Χρόνος για την εκκίνηση του Ethernet Shield
 
-  if (!mqttClient.connect(broker, port)) {
-    Serial.print("Δεν είναι δυνατή η σύνδεση στον MQTT Broker! Error code = ");
-    Serial.println(mqttClient.connectError());
-
-    while (1);
-  }
-
-  Serial.println("Έγινε σύνδεση στον MQTT Broker");
-  Serial.println();
+  mqttClient.setServer(MQTT_SERVER, 1883);
 
   while (!bme680.init()) {    // Ενεργοποίηση του αισθητήρα BME680
     Serial.println("bme680 init failed ! can't find device!");
@@ -175,7 +192,7 @@ void setup() {
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
   Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
-  //gas.doCalibrate();
+  gas.doCalibrate();
 
   if (air_sensor.init()) { // Ενεργοποίηση του αισθητήρα σωματιδίων
     Serial.println(F("Απέτυχε η ενεργοποίηση του αισθητήρα σωματιδίων!"));
@@ -184,9 +201,12 @@ void setup() {
 }
 
 void loop() {
+    if (!mqttClient.connected()) {
+      mqttReconnect();
+    }
+    mqttClient.loop();  
     if ( RTC.alarm(ALARM_1) )    // check alarm flag, clear it if set
     {
-      mqttClient.poll();
       Going_To_Sleep();
     }  
 }
@@ -197,19 +217,22 @@ void Going_To_Sleep(){
     Serial.println("Sleep Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));    
     delay(10);
 
-    Serial.println ("Temperature:"+String(temper()));
-    Serial.println ("Humidity:"+String(humidity()));
+    //Serial.println ("Temperature:"+String(temper()));
+    //Serial.println ("Humidity:"+String(humidity()));
+    Serial.println ("Pressure:"+String(pressure()));
     Serial.println ("Pm 1.0 "+String(pm25_measurement(5)));
     Serial.println ("Pm 2.5 "+String(pm25_measurement(6)));
     Serial.println ("Pm 10.0 "+String(pm25_measurement(7)));
     Serial.println ("CO:"+String(gas_co()));
     Serial.println ("NO2:"+String(gas_no2()));
 
-    mqttClient.beginMessage(topic);
-    mqttClient.print("hello ");
-    mqttClient.endMessage();
-    Serial.println();
-    
+    mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
+    mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
+    mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
+    mqttPublish(MQTT_TOPIC_PM1, pm25_measurement(5));
+    mqttPublish(MQTT_TOPIC_PM2, pm25_measurement(6));
+    mqttPublish(MQTT_TOPIC_PM3, pm25_measurement(7));
+
     t=RTC.get();
     Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));
     RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
