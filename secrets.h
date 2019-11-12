@@ -4,6 +4,8 @@
 #define MQTT_TOPIC_PM1 "airquality/particles/pm1"
 #define MQTT_TOPIC_PM2 "airquality/particles/pm2"
 #define MQTT_TOPIC_PM3 "airquality/particles/pm3"
+#define MQTT_TOPIC_NOX "airquality/gases/nox"
+#define MQTT_TOPIC_CO "airquality/gases/co"
 #define MQTT_TOPIC_STATE "airquality/bme680/status"
 #define MQTT_CLIENT_ID "arduino19"
 

@@ -2,13 +2,13 @@
 #include <avr/power.h>
 #include <Ethernet.h>
 #include <SPI.h>
-#include <Wire.h>
+//#include <Wire.h>
+#include <PubSubClient.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
-#include "DS3232RTC.h"    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC https://github.com/PaulStoffregen/Time
+#include <DS3232RTC.h>    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC https://github.com/PaulStoffregen/Time
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
 #include "secrets.h"
-#include <PubSubClient.h>
 
 // Ορισμός παραμέτρων για την ενσύρματη σύνδεση στο διαδίκτυο
 byte mac[] = {0x2C, 0xF7, 0xF1, 0x08, 0x27, 0xE0}; // Η διεύθυνση MAC του Ethernet Shield
@@ -131,18 +131,18 @@ float pm25_measurement (int sense) {
 
 void mqttReconnect() {
   while (!mqttClient.connected()) {
-    Serial.print("Attempting MQTT connection...");
+    Serial.print("Προσπάθεια σύνδεσης στο διακομιστή MQTT...");
 
     // Attempt to connect
     if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD, MQTT_TOPIC_STATE, 1, true, "disconnected", false)) {
-      Serial.println("connected");
+      Serial.println("Συνδέθηκε");
 
       // Once connected, publish an announcement...
       mqttClient.publish(MQTT_TOPIC_STATE, "connected", true);
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
-      Serial.println(" try again in 5 seconds");
+      Serial.println(" προσπάθεια σύνδεσης σε 5 δευτερλόπετα");
       delay(5000);
     }
   }
@@ -154,6 +154,41 @@ void mqttPublish(char *topic, float payload) {
   Serial.println(payload);
 
   mqttClient.publish(topic, String(payload).c_str(), true);
+}
+
+time_t compileTime()
+{
+    const time_t FUDGE(10);    //fudge factor to allow for upload time, etc. (seconds, YMMV)
+    const char *compDate = __DATE__, *compTime = __TIME__, *months = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    char compMon[3], *m;
+
+    strncpy(compMon, compDate, 3);
+    compMon[3] = '\0';
+    m = strstr(months, compMon);
+
+    tmElements_t tm;
+    tm.Month = ((m - months) / 3 + 1);
+    tm.Day = atoi(compDate + 4);
+    tm.Year = atoi(compDate + 7) - 1970;
+    tm.Hour = atoi(compTime);
+    tm.Minute = atoi(compTime + 3);
+    tm.Second = atoi(compTime + 6);
+
+    time_t t = makeTime(tm);
+    return t + FUDGE;        //add fudge factor to allow for compile time
+}
+
+time_t getUTC() {   // get the current time
+    noInterrupts();
+    time_t utc = isrUTC;
+    interrupts();
+    return utc;
+}
+
+void setUTC(time_t utc) { // set the current time
+    noInterrupts();
+    isrUTC = utc;
+    interrupts();
 }
 
 void setup() {
@@ -168,6 +203,8 @@ void setup() {
   RTC.alarmInterrupt(ALARM_1, false);
   RTC.alarmInterrupt(ALARM_2, false);
   RTC.squareWave(SQWAVE_NONE);
+
+  RTC.set(compileTime());
 
   time_t t = getUTC();    // Τοποθέτηση της τρέχουσας ώρας στην μεταβλητή t
   t=RTC.get();
@@ -207,47 +244,45 @@ void loop() {
     mqttClient.loop();  
     if ( RTC.alarm(ALARM_1) )    // check alarm flag, clear it if set
     {
-      Going_To_Sleep();
+      Going_To_Measure();
     }  
 }
 
-void Going_To_Sleep(){
+void Going_To_Measure(){
     time_t t;
     t=RTC.get();
     Serial.println("Sleep Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));    
     delay(10);
 
-    //Serial.println ("Temperature:"+String(temper()));
-    //Serial.println ("Humidity:"+String(humidity()));
-    Serial.println ("Pressure:"+String(pressure()));
-    Serial.println ("Pm 1.0 "+String(pm25_measurement(5)));
-    Serial.println ("Pm 2.5 "+String(pm25_measurement(6)));
-    Serial.println ("Pm 10.0 "+String(pm25_measurement(7)));
-    Serial.println ("CO:"+String(gas_co()));
-    Serial.println ("NO2:"+String(gas_no2()));
+    float tem=temper();
+    float hum=humidity();
+    float pre=pressure();
+    float co=gas_co();
+    float no2=gas_no2();
+    float pm1=pm25_measurement(5);
+    float pm2=pm25_measurement(6);
+    float pm3=pm25_measurement(7);
+    
+    Serial.println ("Temperature:"+String(tem));
+    Serial.println ("Humidity:"+String(hum));
+    Serial.println ("Pressure:"+String(pre));
+    Serial.println ("Pm 1.0 "+String(pm1));
+    Serial.println ("Pm 2.5 "+String(pm2));
+    Serial.println ("Pm 10.0 "+String(pm3));
+    Serial.println ("CO:"+String(co));
+    Serial.println ("NO2:"+String(no2));
 
-    mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
-    mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
-    mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
-    mqttPublish(MQTT_TOPIC_PM1, pm25_measurement(5));
-    mqttPublish(MQTT_TOPIC_PM2, pm25_measurement(6));
-    mqttPublish(MQTT_TOPIC_PM3, pm25_measurement(7));
+    mqttPublish(MQTT_TOPIC_TEMPERATURE, tem);
+    mqttPublish(MQTT_TOPIC_HUMIDITY, hum);
+    mqttPublish(MQTT_TOPIC_PRESSURE, pre);
+    mqttPublish(MQTT_TOPIC_CO, co);
+    mqttPublish(MQTT_TOPIC_NOX, no2);
+    mqttPublish(MQTT_TOPIC_PM1, pm1);
+    mqttPublish(MQTT_TOPIC_PM2, pm2);
+    mqttPublish(MQTT_TOPIC_PM3, pm3);
 
     t=RTC.get();
     Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));
     RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
     RTC.alarm(ALARM_1);
-}
-
-time_t getUTC() {   // get the current time
-    noInterrupts();
-    time_t utc = isrUTC;
-    interrupts();
-    return utc;
-}
-
-void setUTC(time_t utc) { // set the current time
-    noInterrupts();
-    isrUTC = utc;
-    interrupts();
 }
