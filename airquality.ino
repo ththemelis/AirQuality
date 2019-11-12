@@ -71,8 +71,7 @@ float temper() { // Συνάρτηση ανάγνωσης της θερμοκρ�
 }
 
 float humidity() { // Συνάρτηση ανάγνωσης της υγρασίας
-  if (bme680.read_sensor_data())
-  {
+  if (bme680.read_sensor_data()) {
     Serial.println(F("Δεν ήταν δυνατή η μέτρηση της υγρασίας"));
     return;
   }
@@ -80,16 +79,14 @@ float humidity() { // Συνάρτηση ανάγνωσης της υγρασί�
 }
 
 float pressure() { // Συνάρτηση ανάγνωσης της ατμοσφαιρικής πίεσης
-  if (bme680.read_sensor_data())
-  {
+  if (bme680.read_sensor_data()) {
     Serial.println(F("Δεν ήταν δυνατή η μέτρηση της ατμ. πίεσης"));
     return;
   }
   return bme680.sensor_result_value.pressure;
 }
 
-err_t parse_result(u8 *data, u8 pm) // Συνάρτηση ανάγνωσης των δεδομένων του αισθητήρα σωματιδίων
-{
+err_t parse_result(u8 *data, u8 pm) { // Συνάρτηση ανάγνωσης των δεδομένων του αισθητήρα σωματιδίων
   //u16 value=0;
   err_t NO_ERROR;
   if (NULL == data)
@@ -242,8 +239,7 @@ void loop() {
       mqttReconnect();
     }
     mqttClient.loop();  
-    if ( RTC.alarm(ALARM_1) )    // check alarm flag, clear it if set
-    {
+    if ( RTC.alarm(ALARM_1) ) {
       Going_To_Measure();
     }  
 }
