@@ -151,8 +151,7 @@ void mqttPublish(char *topic, float payload) {
   mqttClient.publish(topic, String(payload).c_str(), true);
 }
 
-time_t compileTime()
-{
+time_t compileTime() {
     const time_t FUDGE(10);    //fudge factor to allow for upload time, etc. (seconds, YMMV)
     const char *compDate = __DATE__, *compTime = __TIME__, *months = "JanFebMarAprMayJunJulAugSepOctNovDec";
     char compMon[3], *m;
