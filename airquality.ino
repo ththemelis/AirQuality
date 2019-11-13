@@ -49,7 +49,7 @@ float gas_co () { // Συνάρτηση ανάγνωσης του μονοξει
   if (gas.measure_CO() > 0)
     return gas.measure_CO();
   else
-    Serial.println (F("Δεν ήταν δυνατή η μέτρηση το CO"));
+    Serial.println (F("Δεν ήταν δυνατή η μέτρηση του CO"));
 }
 
 float gas_no2 () { // Συνάρτηση ανάγνωσης του δυοξειδίου του αζώτου
@@ -57,6 +57,27 @@ float gas_no2 () { // Συνάρτηση ανάγνωσης του δυοξει�
     return gas.measure_NO2();
   else
     Serial.println (F("Δεν ήταν δυνατή η μέτρηση του ΝΟ2"));
+}
+
+float gas_ch4 () { // Συνάρτηση ανάγνωσης του μεθανίου
+  if (gas.measure_CH4() > 0)
+    return gas.measure_CH4();
+  else
+    Serial.println (F("Δεν ήταν δυνατή η μέτρηση του CH4(Μεθάνιο)"));
+}
+
+float gas_nh3 () { // Συνάρτηση ανάγνωσης της αμμωνίας
+  if (gas.measure_NH3() > 0)
+    return gas.measure_NH3();
+  else
+    Serial.println (F("Δεν ήταν δυνατή η μέτρηση της NH3(Αμμωνία)"));
+}
+
+float gas_c3h8 () { // Συνάρτηση ανάγνωσης του προπανίου
+  if (gas.measure_C3H8() > 0)
+    return gas.measure_C3H8();
+  else
+    Serial.println (F("Δεν ήταν δυνατή η μέτρηση του C3H8(Προπάνιο)"));
 }
 
 float temper() { // Συνάρτηση ανάγνωσης της θερμοκρασίας
@@ -128,11 +149,10 @@ void mqttReconnect() {
   while (!mqttClient.connected()) {
     Serial.print("Προσπάθεια σύνδεσης στο διακομιστή MQTT...");
 
-    // Attempt to connect
+    // Προσπάθεια σύνδεσης στον MQTT server
     if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD, MQTT_TOPIC_STATE, 1, true, "disconnected", false)) {
       Serial.println("Συνδέθηκε");
 
-      // Once connected, publish an announcement...
       mqttClient.publish(MQTT_TOPIC_STATE, "connected", true);
     } else {
       Serial.print("failed, rc=");
@@ -172,14 +192,14 @@ time_t compileTime() {
     return t + FUDGE;        //add fudge factor to allow for compile time
 }
 
-time_t getUTC() {   // get the current time
+time_t getUTC() {   // Διάβασμα από το RTC της ώρας
     noInterrupts();
     time_t utc = isrUTC;
     interrupts();
     return utc;
 }
 
-void setUTC(time_t utc) { // set the current time
+void setUTC(time_t utc) { // Εγγραφή της ώρας στο RTC
     noInterrupts();
     isrUTC = utc;
     interrupts();
@@ -217,13 +237,16 @@ void setup() {
   mqttClient.setServer(MQTT_SERVER, 1883);
 
   while (!bme680.init()) {    // Ενεργοποίηση του αισθητήρα BME680
-    Serial.println("bme680 init failed ! can't find device!");
+    Serial.println("Πρόβλημα στον αισθητήρα bme680!");
     delay(10000);
   }
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
-  Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
-  gas.doCalibrate();
+  gas.powerOn();
+  Serial.print("Firmware Version");
+  Serial.println(gas.getVersion());  
+  //Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
+  //gas.doCalibrate();
 
   if (air_sensor.init()) { // Ενεργοποίηση του αισθητήρα σωματιδίων
     Serial.println(F("Απέτυχε η ενεργοποίηση του αισθητήρα σωματιδίων!"));
@@ -236,7 +259,7 @@ void loop() {
       mqttReconnect();
     }
     mqttClient.loop();  
-    if ( RTC.alarm(ALARM_1) ) {
+    if (RTC.alarm(ALARM_1)) {
       Going_To_Measure();
     }  
 }
@@ -256,17 +279,17 @@ void Going_To_Measure(){
     float pm2=pm25_measurement(6);
     float pm3=pm25_measurement(7);
     
-    Serial.println ("Temperature:"+String(tem));
+    /*Serial.println ("Temperature:"+String(tem));
     Serial.println ("Humidity:"+String(hum));
     Serial.println ("Pressure:"+String(pre));
     Serial.println ("Pm 1.0 "+String(pm1));
     Serial.println ("Pm 2.5 "+String(pm2));
     Serial.println ("Pm 10.0 "+String(pm3));
     Serial.println ("CO:"+String(co));
-    Serial.println ("NO2:"+String(no2));
+    Serial.println ("NO2:"+String(no2));*/
 
-    mqttPublish(MQTT_TOPIC_TEMPERATURE, tem);
-    mqttPublish(MQTT_TOPIC_HUMIDITY, hum);
+    mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
+    mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
     mqttPublish(MQTT_TOPIC_PRESSURE, pre);
     mqttPublish(MQTT_TOPIC_CO, co);
     mqttPublish(MQTT_TOPIC_NOX, no2);
