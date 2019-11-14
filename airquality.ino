@@ -26,7 +26,7 @@ PubSubClient mqttClient(ethClient);
 Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικειμένου για τον αισθητήρα BME680
 
 // Ορισμός παραμέτρων διακοπών
-#define interruptPin 2     // Ορισμός του ακροδέκτη 2 για τον έλεγχο των διακοπών (interrupt)
+#define interruptPin 3     // Ορισμός του ακροδέκτη 2 για τον έλεγχο των διακοπών (interrupt)
 volatile time_t isrUTC;         // Η μεταβλητή είναι volatile, γιατί η τιμή της αλλάζει μέσα στη συνάρτηση για την εξυπηρέτηση της διακοπής
 const int time_interval = 5;    // Ορισμός των λεπτών μεταξύ των μετρήσεων (μεταξύ των διακοπών)
 
