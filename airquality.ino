@@ -190,18 +190,18 @@ time_t compileTime() {
     return t + FUDGE;        //add fudge factor to allow for compile time
 }
 
-time_t getUTC() {   // Διάβασμα από το RTC της ώρας
-    noInterrupts();
-    time_t utc = isrUTC;
-    interrupts();
-    return utc;
-}
+//time_t getUTC() {   // Διάβασμα από το RTC της ώρας
+//    noInterrupts();
+//    time_t utc = isrUTC;
+//    interrupts();
+//    return utc;
+//}
 
-void setUTC(time_t utc) { // Εγγραφή της ώρας στο RTC
-    noInterrupts();
-    isrUTC = utc;
-    interrupts();
-}
+//void setUTC(time_t utc) { // Εγγραφή της ώρας στο RTC
+//    noInterrupts();
+//    isrUTC = utc;
+//    interrupts();
+//}
 
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
@@ -221,7 +221,7 @@ void setup() {
   //time_t t = getUTC();    // Τοποθέτηση της τρέχουσας ώρας στην μεταβλητή t
   //t=RTC.get();
   //setUTC(t);
-  RTC.setAlarm(ALM1_MATCH_SECONDS, 0, 0, 0, time_interval);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
+  RTC.setAlarm(ALM1_MATCH_SECONDS, 0, 0, 0, TIME_INTERVAL);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
   RTC.alarm(ALARM_1);
   RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
   //RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
@@ -287,7 +287,7 @@ void measure(){
 
     mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
     mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
-    mqttPublish(MQTT_TOPIC_PRESSURE, pre);
+    mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
     mqttPublish(MQTT_TOPIC_CO, gas_co());
     mqttPublish(MQTT_TOPIC_NOX, gas_no2());
     mqttPublish(MQTT_TOPIC_PM1, pm25_measurement(5));
