@@ -1,8 +1,5 @@
-#include <avr/sleep.h>    // Βιβλιοθήκη για τη μείωση της κατανάλωσης ενέργειας
-#include <avr/power.h>
 #include <Ethernet.h>
 #include <SPI.h>
-//#include <Wire.h>
 #include <PubSubClient.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
 #include <DS3232RTC.h>    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC https://github.com/PaulStoffregen/Time
@@ -24,11 +21,6 @@ PubSubClient mqttClient(ethClient);
 
 // Ορισμός παραμέτρων λειτουργίας του αισθητήρα θερμοκρασίας/υγρασίας/ατμ. πίεσης
 Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικειμένου για τον αισθητήρα BME680
-
-// Ορισμός παραμέτρων διακοπών
-//#define interruptPin 3     // Ορισμός του ακροδέκτη 2 για τον έλεγχο των διακοπών (interrupt)
-//volatile time_t isrUTC;         // Η μεταβλητή είναι volatile, γιατί η τιμή της αλλάζει μέσα στη συνάρτηση για την εξυπηρέτηση της διακοπής
-//const int time_interval = 5;    // Ορισμός των λεπτών μεταξύ των μετρήσεων (μεταξύ των διακοπών)
 
 // Ορισμός παραμέτρων για τον αισθητήρα σωματιδίων
 u8 buf[100]; // Αρχικοποίηση της μεταβλητής η οποία θα περιέχει τα δεδομένα του αισθητήρα σωματιδίων
@@ -190,41 +182,20 @@ time_t compileTime() {
     return t + FUDGE;        //add fudge factor to allow for compile time
 }
 
-//time_t getUTC() {   // Διάβασμα από το RTC της ώρας
-//    noInterrupts();
-//    time_t utc = isrUTC;
-//    interrupts();
-//    return utc;
-//}
-
-//void setUTC(time_t utc) { // Εγγραφή της ώρας στο RTC
-//    noInterrupts();
-//    isrUTC = utc;
-//    interrupts();
-//}
-
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
   
-  //pinMode(interruptPin,INPUT_PULLUP);
   // Αρχικοποίηση των alarm του RTC
   RTC.setAlarm(ALM1_MATCH_DATE, 0, 0, 0, 1);
-  RTC.setAlarm(ALM2_MATCH_DATE, 0, 0, 0, 1);
   RTC.alarm(ALARM_1);
-  RTC.alarm(ALARM_2);
   RTC.alarmInterrupt(ALARM_1, false);
-  RTC.alarmInterrupt(ALARM_2, false);
   RTC.squareWave(SQWAVE_NONE);
 
   RTC.set(compileTime());
-
-  //time_t t = getUTC();    // Τοποθέτηση της τρέχουσας ώρας στην μεταβλητή t
-  //t=RTC.get();
-  //setUTC(t);
-  RTC.setAlarm(ALM1_MATCH_SECONDS, 0, 0, 0, TIME_INTERVAL);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
+  time_t t; //create a temporary time variable so we can set the time and read the time from the RTC
+  t=RTC.get();//Gets the current time of the RTC
+  RTC.setAlarm(ALM1_MATCH_MINUTES, 0, minute(t)+TIME_INTERVAL, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
   RTC.alarm(ALARM_1);
-  RTC.squareWave(SQWAVE_NONE);    // Ενεργοποίηση των διακοπών/Απενεργοποίηση της τετραγωνικής κυματομορφής
-  //RTC.alarmInterrupt(ALARM_1, true);      // Ενεργοποίηση των διακοπών για το ALARM1
 
   Ethernet.begin(mac, ip, myDns); // Αρχικοποίηση της σύνδεσης στο διαδίκτυο με στατική ΙΡ
   Serial.print("Η διεύθυνση ΙΡ του Arduino είναι ");
@@ -239,52 +210,36 @@ void setup() {
   }
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
-  gas.powerOn();
-  Serial.print("Firmware ");
-  Serial.println(gas.getVersion());  
+  gas.powerOn(); 
   //Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
   //gas.doCalibrate();
 
   if (air_sensor.init()) { // Ενεργοποίηση του αισθητήρα σωματιδίων
     Serial.println(F("Απέτυχε η ενεργοποίηση του αισθητήρα σωματιδίων!"));
     while (1);
-  }  
+  }
+
+  if (!mqttClient.connected()) {
+    mqttReconnect();
+  }
+  measure();
 }
 
 void loop() {
-    if (RTC.alarm(ALARM_1)) {
-      measure();
-    }  
     if (!mqttClient.connected()) {
       mqttReconnect();
-    }
+    }  
+    if (RTC.alarm(ALARM_1)) {
+      measure();
+      time_t t; //create a temporary time variable so we can set the time and read the time from the RTC
+      t=RTC.get();//Gets the current time of the RTC
+      RTC.setAlarm(ALM1_MATCH_MINUTES, 0, minute(t)+TIME_INTERVAL, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
+      RTC.alarm(ALARM_1);
+    }  
     mqttClient.loop();    
 }
 
 void measure(){
-//    time_t t;
-//    t=RTC.get();
-//    Serial.println("Sleep Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));    
-//    delay(10);
-
-//    float tem=temper();
-//    float hum=humidity();
-//   float pre=pressure();
-//    float co=gas_co();
-//    float no2=gas_no2();
-//    float pm1=pm25_measurement(5);
-//    float pm2=pm25_measurement(6);
-//    float pm3=pm25_measurement(7);
-    
-    /*Serial.println ("Temperature:"+String(tem));
-    Serial.println ("Humidity:"+String(hum));
-    Serial.println ("Pressure:"+String(pre));
-    Serial.println ("Pm 1.0 "+String(pm1));
-    Serial.println ("Pm 2.5 "+String(pm2));
-    Serial.println ("Pm 10.0 "+String(pm3));
-    Serial.println ("CO:"+String(co));
-    Serial.println ("NO2:"+String(no2));*/
-
     mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
     mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
     mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
@@ -293,9 +248,4 @@ void measure(){
     mqttPublish(MQTT_TOPIC_PM1, pm25_measurement(5));
     mqttPublish(MQTT_TOPIC_PM2, pm25_measurement(6));
     mqttPublish(MQTT_TOPIC_PM3, pm25_measurement(7));
-
-//    t=RTC.get();
-//    Serial.println("WakeUp Time: "+String(hour(t))+":"+String(minute(t))+":"+String(second(t)));
-//    RTC.setAlarm(ALM1_MATCH_MINUTES , 0, minute(t)+time_interval, 0, 0);        // Ενεργοποίηση του ALARM1
-//    RTC.alarm(ALARM_1);
 }
