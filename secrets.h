@@ -1,7 +1,7 @@
 #define BME_ADDR  uint8_t(0x76)   // Ορισμός της διεύθυνσης I2C του αισθητήρα BME680
 #define GAS_SENSOR uint8_t(0x04) // H διεύθυνση του αισθητήρα στον διαύλο I2C
 
-#define TIME_INTERVAL 3
+#define TIME_INTERVAL 180000
 
 #define MQTT_TOPIC_HUMIDITY "airquality/bme680/humidity"
 #define MQTT_TOPIC_TEMPERATURE "airquality/bme680/temperature"
@@ -14,6 +14,6 @@
 #define MQTT_TOPIC_STATE "airquality/bme680/status"
 #define MQTT_CLIENT_ID "arduino19"
 
-const char *MQTT_SERVER = "192.168.1.50";
+const char *MQTT_SERVER = "192.168.1.125";
 const char *MQTT_USER = "mqttadmin";
 const char *MQTT_PASSWORD = "cvHVf5bPpwLu6tRbf6z9";

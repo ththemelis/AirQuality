@@ -1,11 +1,14 @@
 #include <Ethernet.h>
 #include <SPI.h>
+#include <Wire.h>
 #include <PubSubClient.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
 #include <DS3232RTC.h>    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC https://github.com/PaulStoffregen/Time
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
 #include "secrets.h"
+
+unsigned long time_now = 0;
 
 // Ορισμός παραμέτρων για την ενσύρματη σύνδεση στο διαδίκτυο
 byte mac[] = {0x2C, 0xF7, 0xF1, 0x08, 0x27, 0xE0}; // Η διεύθυνση MAC του Ethernet Shield
@@ -228,14 +231,18 @@ void setup() {
 void loop() {
     if (!mqttClient.connected()) {
       mqttReconnect();
-    }  
-    if (RTC.alarm(ALARM_1)) {
+    }
+/*    if (RTC.alarm(ALARM_1)) {
       measure();
       time_t t; //create a temporary time variable so we can set the time and read the time from the RTC
       t=RTC.get();//Gets the current time of the RTC
       RTC.setAlarm(ALM1_MATCH_MINUTES, 0, minute(t)+TIME_INTERVAL, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
       RTC.alarm(ALARM_1);
-    }  
+    }*/
+    if (millis() - time_now > TIME_INTERVAL) {
+      time_now = millis();
+      measure();
+    }
     mqttClient.loop();    
 }
 
