@@ -251,7 +251,9 @@ void measure(){
     mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
     mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
     mqttPublish(MQTT_TOPIC_CO, gas_co());
-    mqttPublish(MQTT_TOPIC_NOX, gas_no2());
+    mqttPublish(MQTT_TOPIC_CH4, gas_ch4());
+    mqttPublish(MQTT_TOPIC_NO2, gas_no2());
+    mqttPublish(MQTT_TOPIC_NH3, gas_nh3());
     mqttPublish(MQTT_TOPIC_PM1, pm25_measurement(5));
     mqttPublish(MQTT_TOPIC_PM2, pm25_measurement(6));
     mqttPublish(MQTT_TOPIC_PM3, pm25_measurement(7));
