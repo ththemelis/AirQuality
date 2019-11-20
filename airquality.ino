@@ -97,7 +97,7 @@ float pressure() { // Συνάρτηση ανάγνωσης της ατμοσφ�
     Serial.println(F("Δεν ήταν δυνατή η μέτρηση της ατμ. πίεσης"));
     return;
   }
-  return bme680.sensor_result_value.pressure;
+  return bme680.sensor_result_value.pressure / 1000.0;
 }
 
 err_t parse_result(u8 *data, u8 pm) { // Συνάρτηση ανάγνωσης των δεδομένων του αισθητήρα σωματιδίων
