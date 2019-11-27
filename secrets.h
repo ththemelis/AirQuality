@@ -3,17 +3,17 @@
 
 #define TIME_INTERVAL 300000
 
-#define MQTT_TOPIC_HUMIDITY "airquality/bme680/humidity"
-#define MQTT_TOPIC_TEMPERATURE "airquality/bme680/temperature"
-#define MQTT_TOPIC_PRESSURE "airquality/bme680/pressure"
-#define MQTT_TOPIC_PM1 "airquality/particles/pm1"
-#define MQTT_TOPIC_PM2 "airquality/particles/pm2"
-#define MQTT_TOPIC_PM3 "airquality/particles/pm3"
-#define MQTT_TOPIC_NO2 "airquality/gases/no2"
-#define MQTT_TOPIC_NH3 "airquality/gases/nh3"
-#define MQTT_TOPIC_CO "airquality/gases/co"
-#define MQTT_TOPIC_CH4 "airquality/gases/ch4"
-#define MQTT_TOPIC_STATE "airquality/bme680/status"
+#define MQTT_TOPIC_HUMIDITY "airquality/lab19/humidity"
+#define MQTT_TOPIC_TEMPERATURE "airquality/lab19/temperature"
+#define MQTT_TOPIC_PRESSURE "airquality/lab19/pressure"
+#define MQTT_TOPIC_PM1_0 "airquality/lab19/pm1_0"
+#define MQTT_TOPIC_PM2_5 "airquality/lab19/pm2_5"
+#define MQTT_TOPIC_PM10 "airquality/lab19/pm10"
+#define MQTT_TOPIC_NO2 "airquality/lab19/no2"
+#define MQTT_TOPIC_NH3 "airquality/lab19/nh3"
+#define MQTT_TOPIC_CO "airquality/lab19/co"
+#define MQTT_TOPIC_CH4 "airquality/lab19/ch4"
+#define MQTT_TOPIC_STATE "ON"
 #define MQTT_CLIENT_ID "arduino19"
 
 const char *MQTT_SERVER = "192.168.1.50";

@@ -232,13 +232,6 @@ void loop() {
     if (!mqttClient.connected()) {
       mqttReconnect();
     }
-/*    if (RTC.alarm(ALARM_1)) {
-      measure();
-      time_t t; //create a temporary time variable so we can set the time and read the time from the RTC
-      t=RTC.get();//Gets the current time of the RTC
-      RTC.setAlarm(ALM1_MATCH_MINUTES, 0, minute(t)+TIME_INTERVAL, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
-      RTC.alarm(ALARM_1);
-    }*/
     if (millis() - time_now > TIME_INTERVAL) {
       time_now = millis();
       measure();
@@ -254,7 +247,7 @@ void measure(){
     mqttPublish(MQTT_TOPIC_CH4, gas_ch4());
     mqttPublish(MQTT_TOPIC_NO2, gas_no2());
     mqttPublish(MQTT_TOPIC_NH3, gas_nh3());
-    mqttPublish(MQTT_TOPIC_PM1, pm25_measurement(5));
-    mqttPublish(MQTT_TOPIC_PM2, pm25_measurement(6));
-    mqttPublish(MQTT_TOPIC_PM3, pm25_measurement(7));
+    mqttPublish(MQTT_TOPIC_PM1_0, pm25_measurement(5));
+    mqttPublish(MQTT_TOPIC_PM2_5, pm25_measurement(6));
+    mqttPublish(MQTT_TOPIC_PM10, pm25_measurement(7));
 }
