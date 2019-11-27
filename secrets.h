@@ -1,7 +1,7 @@
 #define BME_ADDR  uint8_t(0x76)   // Ορισμός της διεύθυνσης I2C του αισθητήρα BME680
 #define GAS_SENSOR uint8_t(0x04) // H διεύθυνση του αισθητήρα στον διαύλο I2C
 
-#define TIME_INTERVAL 300000
+#define TIME_INTERVAL 60000 //300000
 
 #define MQTT_TOPIC_HUMIDITY "airquality/lab19/humidity"
 #define MQTT_TOPIC_TEMPERATURE "airquality/lab19/temperature"
