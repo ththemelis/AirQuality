@@ -14,17 +14,9 @@ float co[5],no2[5],nh3[5],ch4[5];
 
 unsigned long time_now = 0;
 
-// Ορισμός παραμέτρων για την ενσύρματη σύνδεση στο διαδίκτυο
-byte mac[] = {0x2C, 0xF7, 0xF1, 0x08, 0x27, 0xE0}; // Η διεύθυνση MAC του Ethernet Shield
-IPAddress ip(192, 168, 1, 49); // Η στατική διεύθυνση IP του Ethernet Shield, σε περίπτωση που δεν πάρει διεύθυνση ΙΡ μέσω DHCP
-IPAddress myDns(192, 168, 1, 1); // Η διεύθυνση δρομολογητή, σε περίπτωση που δεν πάρει διεύθυνση ΙΡ μέσω DHCP
 EthernetClient ethClient; // Δημιουργία αντικειμένου για την ενσύρματη σύνδεση στο διαδίκτυο
 
-// Ορισμός παραμέτρων για τον MQTT broker
 PubSubClient mqttClient(ethClient);
-
-// Ορισμός παραμέτρων λειτουργίας του αισθητήρα αερίων
-#define PRE_HEAT_TIME   10 // Διάρκεια προθέρμανσης (σε λεπτά). Απαιτούνται τουλάχιστον 10 λεπτά.
 
 // Ορισμός παραμέτρων λειτουργίας του αισθητήρα θερμοκρασίας/υγρασίας/ατμ. πίεσης
 Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικειμένου για τον αισθητήρα BME680
@@ -233,8 +225,9 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
   ch4[times] = gas_ch4();
   no2[times] = gas_no2();
   nh3[times] = gas_nh3();
-  
-  if (times == 4) { // Κάθε πέντε μετρήσεις υπολογίζεται ο μέσος όρος και γίνεται αποστολή στον MQTT Broker
+
+  times = times + 1;
+  if (times == 5) { // Κάθε πέντε μετρήσεις υπολογίζεται ο μέσος όρος και γίνεται αποστολή στον MQTT Broker
     mqttPublish(MQTT_TOPIC_TEMPERATURE, avg(tem,times));
     mqttPublish(MQTT_TOPIC_HUMIDITY, avg(hum,times));
     mqttPublish(MQTT_TOPIC_PRESSURE, avg(pres,times));
@@ -247,5 +240,4 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
     mqttPublish(MQTT_TOPIC_PM10, avg(pm10,times));
     times = 0;
   }
-  times = times + 1;
 }

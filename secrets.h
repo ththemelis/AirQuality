@@ -1,7 +1,13 @@
+// Ορισμός παραμέτρων για την ενσύρματη σύνδεση στο διαδίκτυο
+byte mac[] = {0x2C, 0xF7, 0xF1, 0x08, 0x27, 0xE0};
+IPAddress ip(192, 168, 1, 49); // Η στατική διεύθυνση IP του Ethernet Shield, σε περίπτωση που δεν πάρει διεύθυνση ΙΡ μέσω DHCP
+IPAddress myDns(192, 168, 1, 1); // Η διεύθυνση δρομολογητή, σε περίπτωση που δεν πάρει διεύθυνση ΙΡ μέσω DHCP
+
 #define BME_ADDR  uint8_t(0x76)   // Ορισμός της διεύθυνσης I2C του αισθητήρα BME680
 #define GAS_SENSOR uint8_t(0x04) // H διεύθυνση του αισθητήρα στον διαύλο I2C
+#define PRE_HEAT_TIME   10 // Διάρκεια προθέρμανσης (σε λεπτά). Απαιτούνται τουλάχιστον 10 λεπτά.
 
-#define TIME_INTERVAL 60000 //300000
+#define TIME_INTERVAL 60000
 
 #define MQTT_TOPIC_HUMIDITY "airquality/lab19/out/humidity"
 #define MQTT_TOPIC_TEMPERATURE "airquality/lab19/out/temperature"
@@ -16,6 +22,6 @@
 #define MQTT_TOPIC_STATE "ON"
 #define MQTT_CLIENT_ID "arduino19-out"
 
-const char *MQTT_SERVER = "192.168.1.50";
+const char *MQTT_SERVER = "lab19-epalkast.duckdns.org";
 const char *MQTT_USER = "mqttadmin";
 const char *MQTT_PASSWORD = "cvHVf5bPpwLu6tRbf6z9";
