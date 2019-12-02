@@ -191,7 +191,8 @@ void setup() {
   if (!mqttClient.connected()) {
     mqttReconnect();
   }
-  
+
+  delay(SETUP_TIME);
   measure();
 }
 
