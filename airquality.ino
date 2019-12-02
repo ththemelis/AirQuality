@@ -3,13 +3,12 @@
 #include <Wire.h>
 #include <PubSubClient.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
-#include <DS3232RTC.h>    // Βιβλιοθήκη για το ρολόι πραγματικού χρόνου https://github.com/JChristensen/DS3232RTC https://github.com/PaulStoffregen/Time
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
 #include "secrets.h"
 
-int times=0; // Μεταβλητή που κρατάει το πλήθος των επαναλήψεων. Μετά από πέντε μετρήσεις, γίνεται αποστολή δεδομένων στον MQTT Broker
-float tem[5], hum[5], pres[5];
+int times=0; // Μεταβλητή που κρατάει το πλήθος των μετρήσεων. Κάθε πέντε μετρήσεις γίνεται υπολογισμός του μέσου όρου και γίνεται αποστολή δεδομένων στον MQTT Broker
+float tem[5], hum[5], pres[5]; // Πίνακες που αποθηκευόνται τα δεδομένα των μετρήσεων
 float pm1_0[5],pm2_5[5],pm10[5];
 float co[5],no2[5],nh3[5],ch4[5];
 
@@ -155,7 +154,7 @@ void mqttReconnect() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
-      Serial.println(" προσπάθεια σύνδεσης σε 5 δευτερλόπετα");
+      Serial.println(" προσπάθεια σύνδεσης σε 5 δευτερόλεπτα");
       delay(5000);
     }
   }
@@ -169,42 +168,9 @@ void mqttPublish(char *topic, float payload) {
   mqttClient.publish(topic, String(payload).c_str(), true);
 }
 
-time_t compileTime() {
-    const time_t FUDGE(10);    //fudge factor to allow for upload time, etc. (seconds, YMMV)
-    const char *compDate = __DATE__, *compTime = __TIME__, *months = "JanFebMarAprMayJunJulAugSepOctNovDec";
-    char compMon[3], *m;
-
-    strncpy(compMon, compDate, 3);
-    compMon[3] = '\0';
-    m = strstr(months, compMon);
-
-    tmElements_t tm;
-    tm.Month = ((m - months) / 3 + 1);
-    tm.Day = atoi(compDate + 4);
-    tm.Year = atoi(compDate + 7) - 1970;
-    tm.Hour = atoi(compTime);
-    tm.Minute = atoi(compTime + 3);
-    tm.Second = atoi(compTime + 6);
-
-    time_t t = makeTime(tm);
-    return t + FUDGE;        //add fudge factor to allow for compile time
-}
-
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
   
-  // Αρχικοποίηση των alarm του RTC
-  RTC.setAlarm(ALM1_MATCH_DATE, 0, 0, 0, 1);
-  RTC.alarm(ALARM_1);
-  RTC.alarmInterrupt(ALARM_1, false);
-  RTC.squareWave(SQWAVE_NONE);
-
-  RTC.set(compileTime());
-  time_t t; //create a temporary time variable so we can set the time and read the time from the RTC
-  t=RTC.get();//Gets the current time of the RTC
-  RTC.setAlarm(ALM1_MATCH_MINUTES, 0, minute(t)+TIME_INTERVAL, 0, 0);  // Ορισμός του ALARM1 για ενεργοποίηση μετά από το διάστημα που ορίζει η μεταβλητή time_interval
-  RTC.alarm(ALARM_1);
-
   Ethernet.begin(mac, ip, myDns); // Αρχικοποίηση της σύνδεσης στο διαδίκτυο με στατική ΙΡ
   Serial.print("Η διεύθυνση ΙΡ του Arduino είναι ");
   Serial.println(Ethernet.localIP());    
@@ -213,27 +179,31 @@ void setup() {
   mqttClient.setServer(MQTT_SERVER, 1883);
 
   while (!bme680.init()) {    // Ενεργοποίηση του αισθητήρα BME680
-    Serial.println("Πρόβλημα στον αισθητήρα bme680!");
-    delay(10000);
+    Serial.println("Απέτυχε η ενεργοποίηση του αισθητήρα θερμοκρασίας/υγρασίας!");
+    while (1);
   }
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
+  unsigned char version = gas.getVersion();
+  Serial.print("Multichannel Gas Sensor version = ");
+  Serial.println(version);  
   gas.powerOn(); 
   //Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
   //gas.doCalibrate();
 
   if (air_sensor.init()) { // Ενεργοποίηση του αισθητήρα σωματιδίων
     Serial.println(F("Απέτυχε η ενεργοποίηση του αισθητήρα σωματιδίων!"));
-//    while (1);
+    while (1);
   }
 
   if (!mqttClient.connected()) {
     mqttReconnect();
   }
+  
   measure();
 }
 
-float avg (float *arr, int len) {
+float avg (float *arr, int len) { // Υπολογισμός του μέσου όρου των πέντε τελευταίων μετρήσεων
   float sum = 0L;
   for (int i = 0; i < len; i++) {
     sum += arr[i];
@@ -252,7 +222,7 @@ void loop() {
     mqttClient.loop();    
 }
 
-void measure(){
+void measure(){ // Πραγματοποίηση λήψης των μετρήσεων από τους αισθητήρες
   tem[times] = temper();
   hum[times] = humidity();
   pres[times] = pressure();
@@ -264,7 +234,7 @@ void measure(){
   no2[times] = gas_no2();
   nh3[times] = gas_nh3();
   
-  if (times == 4) {
+  if (times == 4) { // Κάθε πέντε μετρήσεις υπολογίζεται ο μέσος όρος και γίνεται αποστολή στον MQTT Broker
     mqttPublish(MQTT_TOPIC_TEMPERATURE, avg(tem,times));
     mqttPublish(MQTT_TOPIC_HUMIDITY, avg(hum,times));
     mqttPublish(MQTT_TOPIC_PRESSURE, avg(pres,times));
