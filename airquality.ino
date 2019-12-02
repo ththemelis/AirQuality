@@ -224,7 +224,7 @@ void setup() {
 
   if (air_sensor.init()) { // Ενεργοποίηση του αισθητήρα σωματιδίων
     Serial.println(F("Απέτυχε η ενεργοποίηση του αισθητήρα σωματιδίων!"));
-    while (1);
+//    while (1);
   }
 
   if (!mqttClient.connected()) {
