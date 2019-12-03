@@ -192,7 +192,7 @@ void setup() {
     mqttReconnect();
   }
 
-  print ("Χρόνος για να στεθεροποιηθεί το σύστημα")
+  print ("Χρόνος για να στεθεροποιηθεί το σύστημα");
   delay(SETUP_TIME);
   measure();
 }
