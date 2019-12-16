@@ -17,8 +17,14 @@ PubSubClient mqttClient(ethClient);
 Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικειμένου για τον αισθητήρα BME680
 
 // Ορισμός παραμέτρων για τον αισθητήρα σωματιδίων
+const byte SensorPayloadLength = 28;
+const byte SensorPayloadBufferSize = 29;
+const byte SensorPayloadPM1_0Position = 4;
+const byte SensorPayloadPM2_5Position = 6;
+const byte SensorPayloadPM10_0Position = 8;
 u8 buf[100]; // Αρχικοποίηση της μεταβλητής η οποία θα περιέχει τα δεδομένα του αισθητήρα σωματιδίων
 HM330X air_sensor; // Δημιουργία αντικειμένου για την μέτρηση σωματιδίων
+byte SensorPayload[SensorPayloadBufferSize];
 
 void gas_preheat () { // Συνάρτηση για την προθέρμανση του αισθητήρα αερίων
   for (int i = 60 * PRE_HEAT_TIME; i >= 0; i--)
@@ -157,7 +163,18 @@ void mqttPublish(char *topic, float payload) {
 
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
-  
+
+  if (Ethernet.hardwareStatus() == EthernetNoHardware) {  // Έλεγχος ύπαρξης του Ethernet Shield
+    Serial.println("Δε βρέθηκε το Ethernet Shield!!");
+    while (true) {
+      delay(1);
+    }
+  }  
+
+  if (Ethernet.linkStatus() == LinkOFF) {
+    Serial.println("Δεν έχει συνδεθεί καλώδιο δικτύου!!");
+  }
+    
   Ethernet.begin(mac, ip, myDns); // Αρχικοποίηση της σύνδεσης στο διαδίκτυο με στατική ΙΡ
   Serial.print("Η διεύθυνση ΙΡ του Arduino είναι ");
   Serial.println(Ethernet.localIP());    
@@ -189,6 +206,7 @@ void setup() {
 
   Serial.print ("Χρόνος για να στεθεροποιηθεί το σύστημα");
   delay(SETUP_TIME);
+  Serial.print ("Η αρχική ρύθμιση ολοκληρώθηκε με επιτυχία");
   measure();
 }
 
@@ -204,20 +222,33 @@ void loop() {
 }
 
 void measure(){ // Πραγματοποίηση λήψης των μετρήσεων από τους αισθητήρες
-  if (bme680.read_sensor_data()) {
-    Serial.println("Ο αισθητήρας θερμοκρασίας/υγρασίας δε λειτουργεί!!");
-  }
-  else {
-    mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
-    mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
-    mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
-  }
+  byte sum=0;
+  short pm1_0;
   
+  mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
+  mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
+  mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
+
   mqttPublish(MQTT_TOPIC_CO, gas_co());
   mqttPublish(MQTT_TOPIC_CH4, gas_ch4());
   mqttPublish(MQTT_TOPIC_NO2, gas_no2());
   mqttPublish(MQTT_TOPIC_NH3, gas_nh3());
-  mqttPublish(MQTT_TOPIC_PM1_0, pm25_measurement(5));
-  mqttPublish(MQTT_TOPIC_PM2_5, pm25_measurement(6));
-  mqttPublish(MQTT_TOPIC_PM10, pm25_measurement(7));
+  
+  if(air_sensor.read_sensor_value(SensorPayload,SensorPayloadBufferSize) == NO_ERROR) {
+    // Calculate then validate the payload "checksum"
+    for(int i=0;i<SensorPayloadLength;i++)
+    {
+        sum+=SensorPayload[i];
+    }
+    if(sum!=SensorPayload[SensorPayloadLength])
+    {
+        Serial.println("Invalid checksum");
+        return;
+    } 
+    pm1_0 = (u16)SensorPayload[SensorPayloadPM1_0Position]<<8|SensorPayload[SensorPayloadPM1_0Position+1];
+    mqttPublish(MQTT_TOPIC_PM1_0, pm1_0);
+    //mqttPublish(MQTT_TOPIC_PM1_0, pm25_measurement(5));
+    mqttPublish(MQTT_TOPIC_PM2_5, pm25_measurement(6));
+    mqttPublish(MQTT_TOPIC_PM10, pm25_measurement(7));
+  }
 }
