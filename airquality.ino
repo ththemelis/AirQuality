@@ -7,11 +7,6 @@
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
 #include "secrets.h"
 
-int times=0; // Μεταβλητή που κρατάει το πλήθος των μετρήσεων. Κάθε πέντε μετρήσεις γίνεται υπολογισμός του μέσου όρου και γίνεται αποστολή δεδομένων στον MQTT Broker
-float tem[5], hum[5], pres[5]; // Πίνακες που αποθηκευόνται τα δεδομένα των μετρήσεων
-float pm1_0[5],pm2_5[5],pm10[5];
-float co[5],no2[5],nh3[5],ch4[5];
-
 unsigned long time_now = 0;
 
 EthernetClient ethClient; // Δημιουργία αντικειμένου για την ενσύρματη σύνδεση στο διαδίκτυο
@@ -197,14 +192,6 @@ void setup() {
   measure();
 }
 
-float avg (float *arr, int len) { // Υπολογισμός του μέσου όρου των πέντε τελευταίων μετρήσεων
-  float sum = 0L;
-  for (int i = 0; i < len; i++) {
-    sum += arr[i];
-  }
-  return sum / len;
-}
-
 void loop() {
     if (!mqttClient.connected()) {
       mqttReconnect();
@@ -217,29 +204,20 @@ void loop() {
 }
 
 void measure(){ // Πραγματοποίηση λήψης των μετρήσεων από τους αισθητήρες
-  tem[times] = temper();
-  hum[times] = humidity();
-  pres[times] = pressure();
-  pm1_0[times] = pm25_measurement(5);
-  pm2_5[times] = pm25_measurement(6);
-  pm10[times] = pm25_measurement(7);
-  co[times] = gas_co();
-  ch4[times] = gas_ch4();
-  no2[times] = gas_no2();
-  nh3[times] = gas_nh3();
-
-  times = times + 1;
-  if (times == 5) { // Κάθε πέντε μετρήσεις υπολογίζεται ο μέσος όρος και γίνεται αποστολή στον MQTT Broker
-    mqttPublish(MQTT_TOPIC_TEMPERATURE, avg(tem,times));
-    mqttPublish(MQTT_TOPIC_HUMIDITY, avg(hum,times));
-    mqttPublish(MQTT_TOPIC_PRESSURE, avg(pres,times));
-    mqttPublish(MQTT_TOPIC_CO, avg(co,times));
-    mqttPublish(MQTT_TOPIC_CH4, avg(ch4,times));
-    mqttPublish(MQTT_TOPIC_NO2, avg(no2,times));
-    mqttPublish(MQTT_TOPIC_NH3, avg(nh3,times));
-    mqttPublish(MQTT_TOPIC_PM1_0, avg(pm1_0,times));
-    mqttPublish(MQTT_TOPIC_PM2_5, avg(pm2_5,times));
-    mqttPublish(MQTT_TOPIC_PM10, avg(pm10,times));
-    times = 0;
+  if (bme680.read_sensor_data()) {
+    Serial.println("Ο αισθητήρας θερμοκρασίας/υγρασίας δε λειτουργεί!!");
   }
+  else {
+    mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
+    mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
+    mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
+  }
+  
+  mqttPublish(MQTT_TOPIC_CO, gas_co());
+  mqttPublish(MQTT_TOPIC_CH4, gas_ch4());
+  mqttPublish(MQTT_TOPIC_NO2, gas_no2());
+  mqttPublish(MQTT_TOPIC_NH3, gas_nh3());
+  mqttPublish(MQTT_TOPIC_PM1_0, pm25_measurement(5));
+  mqttPublish(MQTT_TOPIC_PM2_5, pm25_measurement(6));
+  mqttPublish(MQTT_TOPIC_PM10, pm25_measurement(7));
 }
