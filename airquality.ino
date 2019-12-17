@@ -164,13 +164,6 @@ void mqttPublish(char *topic, float payload) {
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
 
-  if (Ethernet.hardwareStatus() == EthernetNoHardware) {  // Έλεγχος ύπαρξης του Ethernet Shield
-    Serial.println("Δε βρέθηκε το Ethernet Shield!!");
-    while (true) {
-      delay(1);
-    }
-  }  
-
   if (Ethernet.linkStatus() == LinkOFF) {
     Serial.println("Δεν έχει συνδεθεί καλώδιο δικτύου!!");
   }
@@ -224,6 +217,8 @@ void loop() {
 void measure(){ // Πραγματοποίηση λήψης των μετρήσεων από τους αισθητήρες
   byte sum=0;
   short pm1_0;
+  short pm2_5;
+  short pm10_0;  
   
   mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
   mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
@@ -247,8 +242,9 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
     } 
     pm1_0 = (u16)SensorPayload[SensorPayloadPM1_0Position]<<8|SensorPayload[SensorPayloadPM1_0Position+1];
     mqttPublish(MQTT_TOPIC_PM1_0, pm1_0);
-    //mqttPublish(MQTT_TOPIC_PM1_0, pm25_measurement(5));
-    mqttPublish(MQTT_TOPIC_PM2_5, pm25_measurement(6));
-    mqttPublish(MQTT_TOPIC_PM10, pm25_measurement(7));
+    pm2_5 = (u16)SensorPayload[SensorPayloadPM2_5Position]<<8|SensorPayload[SensorPayloadPM2_5Position+1];
+    mqttPublish(MQTT_TOPIC_PM2_5, pm2_5);
+    pm10_0 = (u16)SensorPayload[SensorPayloadPM10_0Position]<<8|SensorPayload[SensorPayloadPM10_0Position+1];
+    mqttPublish(MQTT_TOPIC_PM10, pm10_0);   
   }
 }
