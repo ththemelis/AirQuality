@@ -220,7 +220,7 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
   short pm2_5;
   short pm10_0;  
   
-  mqttPublish(MQTT_TOPIC_TEMPERATURE, temper());
+  mqttPublish(MQTT_TOPIC_TEMPERATURE, temper() - 4.5);
   mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
   mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
 
