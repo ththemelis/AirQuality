@@ -1,6 +1,7 @@
 #include <Ethernet.h>
 #include <SPI.h>
 #include <Wire.h>
+#include <math.h>
 #include <PubSubClient.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
 #include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
@@ -81,6 +82,19 @@ float temper() { // Συνάρτηση ανάγνωσης της θερμοκρ�
   return bme680.sensor_result_value.temperature;
 }
 
+float temper2() {
+  int B = 4275;               // B value of the thermistor
+  int R0 = 100000;            // R0 = 100k
+  int pinTempSensor = A0;     // Grove - Temperature Sensor connect to A0
+  float temperature;
+    int a = analogRead(pinTempSensor);
+
+    float R = 1023.0/a-1.0;
+    R = R0*R;
+
+    return temperature = 1.0/(log(R/R0)/B+1/298.15)-273.15; // convert to temperature via datasheet
+}
+
 float humidity() { // Συνάρτηση ανάγνωσης της υγρασίας
   if (bme680.read_sensor_data()) {
     Serial.println(F("Δεν ήταν δυνατή η μέτρηση της υγρασίας"));
@@ -95,45 +109,6 @@ float pressure() { // Συνάρτηση ανάγνωσης της ατμοσφ�
     return;
   }
   return bme680.sensor_result_value.pressure / 1000.0;
-}
-
-err_t parse_result(u8 *data, u8 pm) { // Συνάρτηση ανάγνωσης των δεδομένων του αισθητήρα σωματιδίων
-  err_t NO_ERROR;
-  if (NULL == data)
-    return ERROR_PARAM;
-  return (u16)data[pm * 2] << 8 | data[pm * 2 + 1];
-}
-
-float pm25_measurement (int sense) {
-
-  if (air_sensor.read_sensor_value(buf, 29)) {
-    Serial.println(F("Δεν ήταν δυνατή η μέτρηση σωματιδίων!"));
-  }
-
-  if (sense == 2)
-    return parse_result(buf, 2); // Συγκέντρωση σωματιδίων PM1.0 Std
-  else if (sense == 3)
-    return parse_result(buf, 3); // Συγκέντρωση σωματιδίων PM2.5 Std
-  else if (sense == 4)
-    return parse_result(buf, 4); // Συγκέντρωση σωματιδίων PM10 Std
-  else if (sense == 5)
-    return parse_result(buf, 5); // Συγκέντρωση σωματιδίων PM1.0 Atm
-  else if (sense == 6)
-    return parse_result(buf, 6); // Συγκέντρωση σωματιδίων PM2.5 Atm
-  else if (sense == 7)
-    return parse_result(buf, 7); // Συγκέντρωση σωματιδίων PM10 Atm
-  else if (sense == 8)
-    return parse_result(buf, 8); // Σωματίδια μεγαλύτερα από 0.3μm
-  else if (sense == 9)
-    return parse_result(buf, 9); // Σωματίδια μεγαλύτερα από 0.5μm
-  else if (sense == 10)
-    return parse_result(buf, 10); // Σωματίδια μεγαλύτερα από 1.0μm
-  else if (sense == 11)
-    return parse_result(buf, 11); // Σωματίδια μεγαλύτερα από 2.5μm
-  else if (sense == 12)
-    return parse_result(buf, 12); // Σωματίδια μεγαλύτερα από 5.0μm
-  else
-    return parse_result(buf, 13); // Σωματίδια μεγαλύτερα από 10.0μm
 }
 
 void mqttReconnect() {
@@ -163,10 +138,6 @@ void mqttPublish(char *topic, float payload) {
 
 void setup() {
   Serial.begin(115200);   // Ενεργοποίηση της σειριακής κονσόλας
-
-  if (Ethernet.linkStatus() == LinkOFF) {
-    Serial.println("Δεν έχει συνδεθεί καλώδιο δικτύου!!");
-  }
     
   Ethernet.begin(mac, ip, myDns); // Αρχικοποίηση της σύνδεσης στο διαδίκτυο με στατική ΙΡ
   Serial.print("Η διεύθυνση ΙΡ του Arduino είναι ");
@@ -181,9 +152,6 @@ void setup() {
   }
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
-  unsigned char version = gas.getVersion();
-  Serial.print("Multichannel Gas Sensor version = ");
-  Serial.println(version);  
   gas.powerOn(); 
   //Serial.println ("Βαθμονόμηση του αισθητήρα αερίων");
   //gas.doCalibrate();
@@ -197,7 +165,7 @@ void setup() {
     mqttReconnect();
   }
 
-  Serial.print ("Χρόνος για να στεθεροποιηθεί το σύστημα");
+  Serial.println ("Χρόνος για να στεθεροποιηθεί το σύστημα");
   delay(SETUP_TIME);
   Serial.print ("Η αρχική ρύθμιση ολοκληρώθηκε με επιτυχία");
   measure();
@@ -221,6 +189,7 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
   short pm10_0;  
   
   mqttPublish(MQTT_TOPIC_TEMPERATURE, temper() - 4.5);
+  mqttPublish(MQTT_TOPIC_TEMPERATURE2, temper2());
   mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
   mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
 

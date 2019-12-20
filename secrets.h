@@ -12,6 +12,7 @@ IPAddress myDns(192, 168, 1, 1); // Η διεύθυνση δρομολογητή
 
 #define MQTT_TOPIC_HUMIDITY "airquality/lab19/out/humidity"
 #define MQTT_TOPIC_TEMPERATURE "airquality/lab19/out/temperature"
+#define MQTT_TOPIC_TEMPERATURE2 "airquality/lab19/out/temperature2"
 #define MQTT_TOPIC_PRESSURE "airquality/lab19/out/pressure"
 #define MQTT_TOPIC_PM1_0 "airquality/lab19/out/pm1_0"
 #define MQTT_TOPIC_PM2_5 "airquality/lab19/out/pm2_5"
