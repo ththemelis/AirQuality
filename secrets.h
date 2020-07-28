@@ -7,12 +7,16 @@ IPAddress myDns(192, 168, 1, 1); // Η διεύθυνση δρομολογητή
 #define GAS_SENSOR uint8_t(0x04) // H διεύθυνση του αισθητήρα στον διαύλο I2C
 #define PRE_HEAT_TIME   10 // Διάρκεια προθέρμανσης (σε λεπτά). Απαιτούνται τουλάχιστον 10 λεπτά.
 
-#define TIME_INTERVAL 300000 // Χρόνος μεταξύ των μετρήσεων
+#define DHTPIN 2
+#define DHTTYPE DHT22
+
+#define TIME_INTERVAL 60000 // Χρόνος μεταξύ των μετρήσεων
 #define SETUP_TIME 60000  // Αρχικός χρόνος για την σταθεροποίηση του συστήματος (1 λεπτό)
 
 #define MQTT_TOPIC_HUMIDITY "airquality/lab19/out/humidity"
 #define MQTT_TOPIC_TEMPERATURE "airquality/lab19/out/temperature"
-#define MQTT_TOPIC_TEMPERATURE2 "airquality/lab19/out/temperature2"
+#define MQTT_TOPIC_DHTTEMPERATURE "airquality/lab19/out/dhttemperature"
+#define MQTT_TOPIC_DHTHUMIDITY "airquality/lab19/out/dhthumidity"
 #define MQTT_TOPIC_PRESSURE "airquality/lab19/out/pressure"
 #define MQTT_TOPIC_PM1_0 "airquality/lab19/out/pm1_0"
 #define MQTT_TOPIC_PM2_5 "airquality/lab19/out/pm2_5"

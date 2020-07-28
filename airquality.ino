@@ -4,8 +4,9 @@
 #include <math.h>
 #include <PubSubClient.h>
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
-#include "seeed_bme680.h" // Βιβλιοθήκη για τον αισθητήρα BME680 https://github.com/Seeed-Studio/BME680_4_In_1_Sensor_Drv
+#include "Zanshin_BME680.h"
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
+#include <DHT.h>
 #include "secrets.h"
 
 unsigned long time_now = 0;
@@ -14,8 +15,14 @@ EthernetClient ethClient; // Δημιουργία αντικειμένου γι�
 
 PubSubClient mqttClient(ethClient);
 
-// Ορισμός παραμέτρων λειτουργίας του αισθητήρα θερμοκρασίας/υγρασίας/ατμ. πίεσης
-Seeed_BME680 bme680(BME_ADDR);    // Δημιουργία του αντικειμένου για τον αισθητήρα BME680
+BME680_Class BME680; ///< Create an instance of the BME680 class
+
+float altitude(const int32_t press, const float seaLevel = 1013.25); ///< Forward function declaration with default value for sea level
+float altitude(const int32_t press, const float seaLevel) {
+  static float Altitude;
+  Altitude = 44330.0*(1.0-pow(((float)press/100.0)/seaLevel,0.1903)); // Convert into altitude in meters
+  return(Altitude);
+}
 
 // Ορισμός παραμέτρων για τον αισθητήρα σωματιδίων
 const byte SensorPayloadLength = 28;
@@ -26,6 +33,8 @@ const byte SensorPayloadPM10_0Position = 8;
 u8 buf[100]; // Αρχικοποίηση της μεταβλητής η οποία θα περιέχει τα δεδομένα του αισθητήρα σωματιδίων
 HM330X air_sensor; // Δημιουργία αντικειμένου για την μέτρηση σωματιδίων
 byte SensorPayload[SensorPayloadBufferSize];
+
+DHT dht(DHTPIN, DHTTYPE);
 
 void gas_preheat () { // Συνάρτηση για την προθέρμανση του αισθητήρα αερίων
   for (int i = 60 * PRE_HEAT_TIME; i >= 0; i--)
@@ -73,34 +82,38 @@ float gas_c3h8 () { // Συνάρτηση ανάγνωσης του προπαν
     Serial.println (F("Δεν ήταν δυνατή η μέτρηση του C3H8(Προπάνιο)"));
 }
 
-float temper() { // Συνάρτηση ανάγνωσης της θερμοκρασίας
-  if (bme680.read_sensor_data())
-  {
-    Serial.println(F("Δεν ήταν δυνατή η μέτρηση της θερμοκρασίας"));
-    return;
-  }
-  return bme680.sensor_result_value.temperature;
+float bme680temperature () {
+  static int32_t  temp, humidity, pressure, gas;
+  BME680.getSensorData(temp,humidity,pressure,gas);
+  
+  return (int8_t)(temp/100);   
 }
 
-float temper2() {
-  int B = 4275;               // B value of the thermistor
-  int R0 = 100000;            // R0 = 100k
-  int pinTempSensor = A0;     // Grove - Temperature Sensor connect to A0
-  float temperature;
-    int a = analogRead(pinTempSensor);
-
-    float R = 1023.0/a-1.0;
-    R = R0*R;
-
-    return temperature = 1.0/(log(R/R0)/B+1/298.15)-273.15; // convert to temperature via datasheet
+float bme680humidity () {
+  static int32_t  temp, humidity, pressure, gas;
+  BME680.getSensorData(temp,humidity,pressure,gas);
+  
+  return (int8_t)(humidity/1000);   
 }
 
-float humidity() { // Συνάρτηση ανάγνωσης της υγρασίας
-  if (bme680.read_sensor_data()) {
-    Serial.println(F("Δεν ήταν δυνατή η μέτρηση της υγρασίας"));
+float dhttemperature() {
+  float t = dht.readTemperature();
+    
+  if (isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
     return;
   }
-  return bme680.sensor_result_value.humidity;
+  return t;
+}
+
+float dhthumidity() {
+  float h = dht.readHumidity();
+  
+  if (isnan(h)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+  return h;
 }
 
 float pressure() { // Συνάρτηση ανάγνωσης της ατμοσφαιρικής πίεσης
@@ -133,7 +146,7 @@ void mqttPublish(char *topic, float payload) {
   Serial.print(": ");
   Serial.println(payload);
 
-  mqttClient.publish(topic, String(payload).c_str(), true);
+//  mqttClient.publish(topic, String(payload).c_str(), true);
 }
 
 void setup() {
@@ -144,12 +157,19 @@ void setup() {
   Serial.println(Ethernet.localIP());    
   delay(5000); // Χρόνος για την εκκίνηση του Ethernet Shield
 
-  mqttClient.setServer(MQTT_SERVER, 1883);
+//  mqttClient.setServer(MQTT_SERVER, 1883);
 
-  while (!bme680.init()) {    // Ενεργοποίηση του αισθητήρα BME680
-    Serial.println("Απέτυχε η ενεργοποίηση του αισθητήρα θερμοκρασίας/υγρασίας!");
-    while (1);
+  while (!BME680.begin(I2C_STANDARD_MODE)) // Start BME680 using I2C, use first device found
+  {
+    Serial.print(F("-  Unable to find BME680. Trying again in 5 seconds.\n"));
+    delay(5000);
   }
+  Serial.print(F("- Setting 16x oversampling for all sensors\n"));
+  BME680.setOversampling(TemperatureSensor,Oversample16); // Use enumerated type values
+  BME680.setOversampling(HumiditySensor,   Oversample16); // Use enumerated type values
+  BME680.setOversampling(PressureSensor,   Oversample16); // Use enumerated type values
+  Serial.print(F("- Setting IIR filter to a value of 4 samples\n"));
+  BME680.setIIRFilter(IIR4); // Use enumerated type values
 
   gas.begin(GAS_SENSOR); // Ενεργοποίηση του αισθητήρα αερίων, με διεύθυνση στο δίαυλο Ι2C 0x04
   gas.powerOn(); 
@@ -161,25 +181,27 @@ void setup() {
     while (1);
   }
 
-  if (!mqttClient.connected()) {
-    mqttReconnect();
-  }
+  dht.begin();
+  
+//  if (!mqttClient.connected()) {
+//    mqttReconnect();
+//  }
 
   Serial.println ("Χρόνος για να στεθεροποιηθεί το σύστημα");
   delay(SETUP_TIME);
-  Serial.print ("Η αρχική ρύθμιση ολοκληρώθηκε με επιτυχία");
+  Serial.println ("Η αρχική ρύθμιση ολοκληρώθηκε με επιτυχία");
   measure();
 }
 
 void loop() {
-    if (!mqttClient.connected()) {
-      mqttReconnect();
-    }
+//    if (!mqttClient.connected()) {
+//      mqttReconnect();
+//    }
     if (millis() - time_now > TIME_INTERVAL) {
       time_now = millis();
       measure();
     }
-    mqttClient.loop();    
+//    mqttClient.loop();    
 }
 
 void measure(){ // Πραγματοποίηση λήψης των μετρήσεων από τους αισθητήρες
@@ -188,10 +210,11 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
   short pm2_5;
   short pm10_0;  
   
-  mqttPublish(MQTT_TOPIC_TEMPERATURE, temper() - 4.5);
-  mqttPublish(MQTT_TOPIC_TEMPERATURE2, temper2());
-  mqttPublish(MQTT_TOPIC_HUMIDITY, humidity());
-  mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
+  mqttPublish(MQTT_TOPIC_TEMPERATURE, bme680temperature());
+  mqttPublish(MQTT_TOPIC_HUMIDITY, bme680humidity());
+  mqttPublish(MQTT_TOPIC_DHTTEMPERATURE, dhttemperature());
+  mqttPublish(MQTT_TOPIC_DHTHUMIDITY, dhthumidity());
+//  mqttPublish(MQTT_TOPIC_PRESSURE, pressure());
 
   mqttPublish(MQTT_TOPIC_CO, gas_co());
   mqttPublish(MQTT_TOPIC_CH4, gas_ch4());
