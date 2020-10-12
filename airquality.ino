@@ -6,7 +6,6 @@
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
 #include "Zanshin_BME680.h"
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
-//#include <DHT.h>
 #include "secrets.h"
 
 unsigned long time_now = 0;
@@ -98,26 +97,6 @@ float bme680pressure () {
   return (int8_t)(pressure % 100);   
 }
 
-/*float dhttemperature() {
-  float t = dht.readTemperature();
-    
-  if (isnan(t)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
-  return t;
-}
-
-float dhthumidity() {
-  float h = dht.readHumidity();
-  
-  if (isnan(h)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
-  return h;
-}*/
-
 void mqttReconnect() {
   while (!mqttClient.connected()) {
     Serial.print("Προσπάθεια σύνδεσης στο διακομιστή MQTT...");
@@ -175,8 +154,6 @@ void setup() {
     while (1);
   }
 
-  //dht.begin();
-  
   if (!mqttClient.connected()) {
     mqttReconnect();
   }
@@ -207,8 +184,6 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
   mqttPublish(MQTT_TOPIC_TEMPERATURE, bme680temperature());
   mqttPublish(MQTT_TOPIC_HUMIDITY, bme680humidity());
   mqttPublish(MQTT_TOPIC_PRESSURE, bme680pressure());
-  //mqttPublish(MQTT_TOPIC_DHTTEMPERATURE, dhttemperature());
-  //mqttPublish(MQTT_TOPIC_DHTHUMIDITY, dhthumidity());
   
   mqttPublish(MQTT_TOPIC_CO, gas_co());
   mqttPublish(MQTT_TOPIC_CH4, gas_ch4());
