@@ -6,6 +6,7 @@
 #include "Seeed_HM330X.h" // https://github.com/Seeed-Studio/Seeed_PM2_5_sensor_HM3301
 #include "Zanshin_BME680.h"
 #include "MutichannelGasSensor.h" // https://github.com/Seeed-Studio/Mutichannel_Gas_Sensor
+#include "vars.h"
 #include "secrets.h"
 
 unsigned long time_now = 0;
@@ -14,9 +15,9 @@ EthernetClient ethClient; // Δημιουργία αντικειμένου γι�
 
 PubSubClient mqttClient(ethClient);
 
-BME680_Class BME680; ///< Create an instance of the BME680 class
+BME680_Class BME680; // Δημιουργία αντικειμένου για τον αισθητήρα BME680
 
-float altitude(const int32_t press, const float seaLevel = 1013.25); ///< Forward function declaration with default value for sea level
+float altitude(const int32_t press, const float seaLevel = 1013.25); // Forward function declaration with default value for sea level
 
 // Ορισμός παραμέτρων για τον αισθητήρα σωματιδίων
 const byte SensorPayloadLength = 28;
@@ -27,8 +28,6 @@ const byte SensorPayloadPM10_0Position = 8;
 u8 buf[100]; // Αρχικοποίηση της μεταβλητής η οποία θα περιέχει τα δεδομένα του αισθητήρα σωματιδίων
 HM330X air_sensor; // Δημιουργία αντικειμένου για την μέτρηση σωματιδίων
 byte SensorPayload[SensorPayloadBufferSize];
-
-//DHT dht(DHTPIN, DHTTYPE);
 
 void gas_preheat () { // Συνάρτηση για την προθέρμανση του αισθητήρα αερίων
   for (int i = 60 * PRE_HEAT_TIME; i >= 0; i--)
@@ -191,7 +190,6 @@ void measure(){ // Πραγματοποίηση λήψης των μετρήσε
   mqttPublish(MQTT_TOPIC_NH3, gas_nh3());
   
   if(air_sensor.read_sensor_value(SensorPayload,SensorPayloadBufferSize) == NO_ERROR) {
-    // Calculate then validate the payload "checksum"
     for(int i=0;i<SensorPayloadLength;i++)
     {
         sum+=SensorPayload[i];
