@@ -1,7 +1,7 @@
 <h1>Συσκευή μέτρησης ποιοτικών χαρακτηριστικών του αέρα</h1>
 <p>Η συσκευή έχει τη δυνατότητα να πραγματοποιεί μετρήσεις της ποιότητας του αέρα. Πιο συγκεκριμένα, μπορεί να μετρήσει τα παρακάτω:</p>
 <ul>
-    <li>Θερμοκρασία - Υγρασία<li>
+    <li>Θερμοκρασία - Υγρασία</li>
     <li>Συγκέντρωση αερίων (CO, NO2)</li>
     <li>Συγκέντρωση sωματιδίων μεγέθους 1.0, 2.5 και 10 μm</li>
 </ul>
@@ -17,4 +17,13 @@
     <li><a href="https://wiki.seeedstudio.com/Grove-Multichannel_Gas_Sensor/" target="_blank">Grove Multichannel Gas Sensor</a></li>
     <li><a href="https://wiki.seeedstudio.com/Grove-I2C_Hub/" target="_blank">Grove I2C Hub</li>
     <li><a href="https://www.raspberrypi.org/products/raspberry-pi-3-model-b/" target="_blank">Raspberry Pi 3B</a></li>
+</ul>
+
+<h2>Λογισμικό</h2>
+<p>Εγκαταστάθηκε και παραμετροποιήθηκε το παρακάτω λογισμικό, στο Raspberry Pi 3B:</p>
+<ul>
+    <li><a href="https://www.influxdata.com/" target="_blank">InfluxDB</a></li>
+    <li><a href="https://nodered.org/" target="_blank">Node-RED</a></li>
+    <li><a href="https://mosquitto.org/" target="_blank">Eclipse Mosquitto</a></li>
+    <li><a href="https://grafana.com/" target="_blank">Grafana</a></li>
 </ul>
