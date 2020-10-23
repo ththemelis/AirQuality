@@ -28,3 +28,5 @@
     <li><a href="https://mosquitto.org/" target="_blank">Eclipse Mosquitto</a></li>
     <li><a href="https://grafana.com/" target="_blank">Grafana</a></li>
 </ul>
+
+<p>Για εύκολη και γρήγορη εγκατάσταση-παραμετροποίηση των παραπάνω λογισμικών, μπορεί να χρησιμοποιηθεί το <a href="https://github.com/gcgarner/IOTstack">IOTstack</a></p>
